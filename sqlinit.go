@@ -11,28 +11,51 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+type DBConfig struct {
+	path   string
+	ip     string
+	port   string
+	dbName string
+}
+
+// Default values, can be overridden
 var (
 	dbConfigPath = "configuration/DBCredentials.json"
 	ipAddress    = "127.0.0.1"
 	portNumber   = "3306"
-	databaseName string
 )
 
-func SetDBConfigPath(path string) {
-	dbConfigPath = path
+// Creates a new DBConfig set to default values
+func NewDBConfig(databaseName string) *DBConfig {
+	return &DBConfig{
+		path:   dbConfigPath,
+		ip:     ipAddress,
+		port:   portNumber,
+		dbName: databaseName,
+	}
 }
 
-func SetIPAddr(addr string) error {
-	ip := net.ParseIP(addr)
-	if ip == nil {
+// This is the most efficient way to connect to the db
+// with default credentials
+func ConnectDefault(databaseName string) (*sql.DB, error) {
+	config := NewDBConfig(databaseName)
+	return config.Connect()
+}
+
+func (dbc *DBConfig) SetDBConfigPath(path string) {
+	dbc.path = path
+}
+
+func (dbc *DBConfig) SetIPAddr(addr string) error {
+	if net.ParseIP(addr) == nil {
 		return errors.New("malformed IP address")
 	}
 
-	ipAddress = addr
+	dbc.ip = addr
 	return nil
 }
 
-func SetPort(port int) error {
+func (dbc *DBConfig) SetPort(port int) error {
 	if port < 0 {
 		return errors.New("negative port number")
 	}
@@ -41,20 +64,16 @@ func SetPort(port int) error {
 		return errors.New("port number exceeds maximum value")
 	}
 
-	portNumber = string(port)
+	dbc.port = string(port)
 	return nil
 }
 
-func SetDatabaseName(name string) {
-	databaseName = name
+func (dbc *DBConfig) SetDatabaseName(name string) {
+	dbc.dbName = name
 }
 
-func InitCnxn() (*sql.DB, error) {
-	if databaseName == "" {
-		return nil, errors.New("database name not set")
-	}
-
-	file, err := ioutil.ReadFile(dbConfigPath)
+func (dbc *DBConfig) Connect() (*sql.DB, error) {
+	file, err := ioutil.ReadFile(dbc.path)
 	if err != nil {
 		return nil, err
 	}
@@ -70,11 +89,11 @@ func InitCnxn() (*sql.DB, error) {
 	}
 
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s",
-		ipAddress,
-		portNumber,
+		dbc.ip,
+		dbc.port,
 		dbCredentials.Username,
 		dbCredentials.Password,
-		databaseName,
+		dbc.dbName,
 	)
 
 	db, err := sql.Open("mysql", dsn+"?parseTime=true")
