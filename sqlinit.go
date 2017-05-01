@@ -1,22 +1,23 @@
 package mysqlinit
 
 import (
-	"io/ioutil"
-	"encoding/json"
-	"fmt"
 	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"net"
 
 	_ "github.com/go-sql-driver/mysql"
-	"net"
-	"errors"
 )
 
 var (
 	dbConfigPath = "configuration/DBCredentials.json"
-	ipAddress = "127.0.0.1"
-	portNumber = "3306"
+	ipAddress    = "127.0.0.1"
+	portNumber   = "3306"
 	databaseName string
 )
+
 func SetDBConfigPath(path string) {
 	dbConfigPath = path
 }
@@ -58,7 +59,7 @@ func InitCnxn() (*sql.DB, error) {
 		return nil, err
 	}
 
-	var dbCredentials struct{
+	var dbCredentials struct {
 		Username string
 		Password string
 	}
@@ -83,4 +84,3 @@ func InitCnxn() (*sql.DB, error) {
 
 	return db, db.Ping()
 }
-
